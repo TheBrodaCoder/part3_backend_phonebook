@@ -75,26 +75,29 @@ app.post('/api/persons', (request, response) => {
       error: "number is not defined"
     })
   } else {
-    Person.find({name: request.body.name}, (err, existingName) => {
-      if (err) {
-        console.log('error at find', err)
-      }
-
-      if (existingName.length > 0) {
-        console.log('name already exist')
-        response.status(400).json({error: 'name is already defined'})
-      } else {
-        const newPerson = new Person({
-          name: request.body.name,
-          number: request.body.number
-        })
-
-        newPerson.save().then( () =>{
-          response.status(200).json({'status': 'Person saved'})
+    Person.find({name: request.body.name}).then(
+      existingName => {
+        if (existingName.length > 0) {
+          console.log('name already exist')
+          response.status(400).json({error: 'name is already defined'})
+        } else {
+          const newPerson = new Person({
+            name: request.body.name,
+            number: request.body.number
+          })
+  
+          newPerson.save().then( () =>{
+            response.status(200).json({'status': 'Person saved'})
+          }
+          )
         }
-        )
       }
-    })
+    ).catch(
+      error => {
+        console.log('error at finding person')
+        response.status(500).json({"error": error})
+      }
+    )
   } 
 })
 
@@ -106,7 +109,12 @@ app.put('/api/persons/:id', (request, response) => {
 
   Person.findByIdAndUpdate(request.params.id, updatedPerson, {new: true}).then(
     result => {
-      response.json(result)
+      if (result) {
+        response.json(result)
+      } else {
+        response.status(404).json({"error": "There is no person with that id"})
+      }
+      
     }
   ).catch(
     error => console.log('error at updating')
