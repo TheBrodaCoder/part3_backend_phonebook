@@ -155,6 +155,7 @@ const errorHandler = (error, request, response, next) => {
 
     case 'ValidationError':
       return response.status(400).send({error: 'Validation error'})
+
     
     default:
       response.status(404).send({error: error})

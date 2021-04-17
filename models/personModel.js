@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
 require('dotenv').config()
 const url = process.env.BASE_URL
+const uniqueValidator = require('mongoose-unique-validator')
 mongoose.set('useFindAndModify', false)
 mongoose.set('useCreateIndex', true)
 
@@ -15,10 +16,13 @@ const personSchema = new mongoose.Schema({
   name: {
     type: String,
     minLength: 3,
-    required: true
+    required: true,
+    unique: true
   },
   number: {
     type: String,
+    required: true,
+    minLength: 8,
     validate: {
       validator: (strtotest) => {
       return /^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/.test(strtotest)
@@ -27,6 +31,8 @@ const personSchema = new mongoose.Schema({
     
   }
 })
+
+personSchema.plugin(uniqueValidator)
 
 personSchema.set('toJSON', {
   transform: (document, returnedObject) => {
