@@ -5,9 +5,9 @@ const app = express()
 require('dotenv').config()
 const Person = require('./models/personModel.js')
 
-
-app.use(express.json())
 app.use(express.static('build'))
+app.use(express.json())
+
 
 morgan.token('content', (request) => {
   if (request.method === 'POST') {
@@ -23,17 +23,17 @@ app.get('/api', (request, response) => {
     response.send('<h1>Persons API</h1>');
 })
 
-app.get('/api/persons', (request, response) => {
+app.get('/api/persons', (request, response, next) => {
     Person.find({}).then(
       phonebook => {
         if (phonebook) {
           response.json(phonebook)
         } else {
           response.status(404).json({error: 'error at requesting phonebook'})
+          console.log(error)
         }
       }).catch(error => {
-        response.status(500).end()
-        console.log('error at finding People', error)
+        next(error)
       })
     
 })
@@ -42,27 +42,23 @@ app.get('/api/persons/:id', (request, response, next) => {
   Person.findById(request.params.id).then(per => {
     response.json(per)
   }).catch(
-    error => {
-      response.status(500).end()
-      console.log('error at finding person with that id, sending 500')
-  })
+    error => {next(error)})
 })
 
-app.delete('/api/persons/:id', (request, response) => {
+app.delete('/api/persons/:id', (request, response, next) => {
   
   Person.findByIdAndDelete(request.params.id).then(
     () => response.status(204).end()
   ).catch(
     error => {
-      console.log('error at deleting person', error)
-      response.status(500).end()
+      next(error)
   })
 
   
 })
 
 
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', (request, response, next) => {
 
   if (!request.body.name) {
     console.log('error at update on name')
@@ -89,19 +85,18 @@ app.post('/api/persons', (request, response) => {
           newPerson.save().then( () =>{
             response.status(200).json({'status': 'Person saved'})
           }
+          ).catch(
+            error => next(error)
           )
         }
       }
     ).catch(
-      error => {
-        console.log('error at finding person')
-        response.status(500).json({"error": error})
-      }
+      error => next(error)
     )
   } 
 })
 
-app.put('/api/persons/:id', (request, response) => {
+app.put('/api/persons/:id', (request, response, next) => {
   const updatedPerson = ({
     name: request.body.name,
     number: request.body.number
@@ -117,11 +112,11 @@ app.put('/api/persons/:id', (request, response) => {
       
     }
   ).catch(
-    error => console.log('error at updating')
+    error => next(error)
   )
 })
 
-app.get('/info', (request, response) => {
+app.get('/info', (request, response, next) => {
   
   Person.find({}).then(
     result => {
@@ -131,11 +126,43 @@ app.get('/info', (request, response) => {
       )
     }
   ).catch(
-    err => console.log('error at info', err)
-  )
-
-  
+    err => next(err)
+  )  
 })
+
+const unknownEndpoint = (request, response) => {
+  response.status(404).send({error: 'unknown endpoint'})
+}
+
+app.use(unknownEndpoint);
+
+const errorHandler = (error, request, response, next) => {
+
+  // if (error.name === 'ValidationError') {
+    
+  // }
+
+
+  switch (error.name) {
+    case 'CastError':
+      return response.status(404).send({error: 'malformatted id'})
+    
+    case 'ReferenceError':
+      return response.status(500).send({error: 'is not defined'})
+    
+    case 'MongoParseError':
+      return response.status(500).send({error: 'Invalid connection string'})
+
+    case 'ValidationError':
+      return response.status(400).send({error: 'Validation error'})
+    
+    default:
+      response.status(404).send({error: error})
+      break;
+  }
+}
+
+app.use(errorHandler)
 
 const PORT =  process.env.PORT || 3001;
 app.listen(PORT, () => {console.log(`Server running on port http://localhost:${PORT}/`)});

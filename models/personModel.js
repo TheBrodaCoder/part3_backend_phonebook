@@ -12,9 +12,20 @@ mongoose.connect(url, { useNewUrlParser: true, useUnifiedTopology: true, useFind
   })
 
 const personSchema = new mongoose.Schema({
-  id: Number,
-  name: String,
-  number: Number
+  name: {
+    type: String,
+    minLength: 3,
+    required: true
+  },
+  number: {
+    type: String,
+    validate: {
+      validator: (strtotest) => {
+      return /^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/.test(strtotest)
+      }
+    }
+    
+  }
 })
 
 personSchema.set('toJSON', {
